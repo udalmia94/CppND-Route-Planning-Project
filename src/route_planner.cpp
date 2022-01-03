@@ -22,7 +22,7 @@ RoutePlanner::RoutePlanner(RouteModel &model, float start_x, float start_y, floa
 // - Node objects have a distance method to determine the distance to another node.
 
 float RoutePlanner::CalculateHValue(RouteModel::Node const *node) {
-    return node->distance(*(this->end_node));
+    return node->distance(*(end_node));
 }
 
 
@@ -55,7 +55,15 @@ void RoutePlanner::AddNeighbors(RouteModel::Node *current_node) {
 // - Return the pointer.
 
 RouteModel::Node *RoutePlanner::NextNode() {
-    
+    // lambda fuction to compare nodes
+    auto Compare = [](RouteModel::Node* a, RouteModel::Node* b) {
+        return ((a->g_value + a->h_value)>(b->g_value + b->h_value));
+    };
+    // sort fuction to sort the list
+    std::sort(this->open_list.begin(), this->open_list.end(), Compare);
+    auto nextNode = open_list.back();
+    open_list.pop_back();
+    return nextNode;
 }
 
 
@@ -73,8 +81,17 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
     std::vector<RouteModel::Node> path_found;
 
     // TODO: Implement your solution here.
+    path_found = {*current_node};
+    while (current_node->parent) {
+        distance = distance + current_node->distance(*(current_node->parent));
+        current_node = (current_node->parent);
+        path_found.push_back(*current_node);
+    }
+
+    std::reverse(path_found.begin(), path_found.end());
 
     distance *= m_Model.MetricScale(); // Multiply the distance by the scale of the map to get meters.
+    // this->distance = distance;
     return path_found;
 }
 
@@ -90,5 +107,15 @@ void RoutePlanner::AStarSearch() {
     RouteModel::Node *current_node = nullptr;
 
     // TODO: Implement your solution here.
+    open_list = {start_node};
+    start_node->visited = true;
 
+    while (open_list.size() > 0) {
+        auto current_node = NextNode();
+        if (current_node == end_node) {
+            m_Model.path = ConstructFinalPath(current_node);
+            return;
+        }
+        AddNeighbors(current_node);
+    }
 }
